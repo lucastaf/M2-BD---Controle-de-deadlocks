@@ -35,6 +35,7 @@ class TransactionThread extends Thread {
             try {
                 randomSleep();
 
+                //Solicita a lock de X, caso seja negada, espera o notify
                 if (!lockManager.lock("X", this)) {
                     synchronized (this) {
                         this.wait();
@@ -43,6 +44,7 @@ class TransactionThread extends Thread {
 
                 randomSleep();
 
+                //Solicita a lock de Y, caso seja negada, espera o notify
                 if (!lockManager.lock("Y", this)) {
                     synchronized (this) {
                         this.wait();
@@ -51,9 +53,11 @@ class TransactionThread extends Thread {
 
                 randomSleep();
 
+                //Libera X
                 lockManager.unlock("X", this);
                 randomSleep();
 
+                //Libera Y
                 lockManager.unlock("Y", this);
                 randomSleep();
 

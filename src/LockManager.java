@@ -14,13 +14,16 @@ class LockManager {
     public synchronized boolean lock(String itemId, TransactionThread transaction) {
         DataItem item = dataItems.get(itemId);
 
+        //Verifica se o lock ta ocupado
         if (!item.isLocked) {
             item.isLocked = true;
             item.owner = transaction;
             System.out.println(transaction.getName() + " obteve lock em " + itemId);
             return true;
         } else {
+
             TransactionThread owner = item.owner;
+            //Se o lock estiver ocupada, verifica se o dono atual da lock pode ser derrubado (wound-wait)
             if (transaction.timestamp < owner.timestamp) {
                 // Wound-wait: transação mais nova espera, mais velha força o abort da mais nova
                 System.out.println(transaction.getName() + " força " + owner.getName() + " a abortar (wound-wait em " + itemId + ")");
@@ -30,7 +33,7 @@ class LockManager {
                 System.out.println(transaction.getName() + " obteve lock em " + itemId);
                 return true;
             } else {
-                // Espera
+                // Se a lock estiver ocupada por uma transação mais antiga, espera
                 System.out.println(transaction.getName() + " está esperando lock em " + itemId);
                 item.queue.add(transaction);
                 return false;
