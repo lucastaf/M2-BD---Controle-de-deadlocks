@@ -10,7 +10,6 @@ import java.util.stream.IntStream;
  * Classe principal da simulação.
  */
 public class DeadlockSimulation {
-
     public static void main(String[] args) {
 
         LockManager manager =
