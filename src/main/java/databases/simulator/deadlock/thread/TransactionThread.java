@@ -72,6 +72,10 @@ public class TransactionThread extends Thread {
 
                 randomDelay();
 
+                // Libera locks (pode ser na mesma ordem de aquisição)
+                lockManager.unlock(firstLock, this);
+                randomDelay();
+
                 // Tenta obter o segundo lock
                 if (!lockManager.lock(secondLock, this)) {
                     synchronized (this) { wait(); }
@@ -79,9 +83,6 @@ public class TransactionThread extends Thread {
 
                 randomDelay();
 
-                // Libera locks (pode ser na mesma ordem de aquisição)
-                lockManager.unlock(firstLock, this);
-                randomDelay();
                 lockManager.unlock(secondLock, this);
                 randomDelay();
 
