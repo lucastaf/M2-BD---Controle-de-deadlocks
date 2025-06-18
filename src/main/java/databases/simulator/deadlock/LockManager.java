@@ -5,6 +5,7 @@ import databases.simulator.deadlock.thread.TransactionThread;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -34,7 +35,7 @@ public class LockManager {
         if (tx.getTimestamp() < owner.getTimestamp()) {
             System.out.println(tx.getName() + " força " + owner.getName()
                     + " a abortar (wound-wait em " + itemId + ")");
-            owner.abort();
+            owner.abort();                  // aborta a thread mais nova
             grantLock(item, tx);
             return true;
         }
@@ -47,27 +48,49 @@ public class LockManager {
 
     /** Libera lock e passa para a próxima thread da fila, se existir. */
     public synchronized void unlock(String itemId, TransactionThread tx) {
-        DataItem item = items.get(itemId);
-
-        if (tx.equals(item.getOwner())) {
-            item.setLocked(false);
-            item.setOwner(null);
-            System.out.println(tx.getName() + " liberou lock em " + itemId);
-
-            TransactionThread next = item.getQueue().poll();
-            if (next != null && !next.isAborted()) {
-                grantLock(item, next);
-                synchronized (next) {
-                    next.notify();
-                }
-            }
-        }
+        internalUnlock(items.get(itemId), tx, false);
     }
 
-    // === utilitário interno ===
+    /**
+     * Libera todos os locks mantidos por uma transação abortada
+     * e remove-a de quaisquer filas de espera.
+     */
+    public synchronized void releaseAllLocks(TransactionThread tx) {
+        items.values().forEach(item -> {
+            // Se a transação é a dona, libera
+            internalUnlock(item, tx, true);
+
+            // Se estava apenas esperando neste item, retira da fila
+            item.getQueue().remove(tx);
+        });
+    }
+
+    // === utilitários internos ===
     private void grantLock(DataItem item, TransactionThread tx) {
         item.setLocked(true);
         item.setOwner(tx);
         System.out.println(tx.getName() + " obteve lock em " + item.getItemId());
+    }
+
+    /**
+     * Libera o lock de 'item' caso 'tx' seja o dono.
+     * Se 'forced'==true, imprime anotação de abort.
+     */
+    private void internalUnlock(DataItem item, TransactionThread tx, boolean forced) {
+        if (item == null || !tx.equals(item.getOwner())) return;
+
+        item.setLocked(false);
+        item.setOwner(null);
+
+        String msg = tx.getName() + " liberou lock em " + item.getItemId();
+        if (forced) msg += " (abort)";
+        System.out.println(msg);
+
+        Queue<TransactionThread> queue = item.getQueue();
+        TransactionThread next = queue.poll();
+        if (next != null && !next.isAborted()) {
+            grantLock(item, next);
+            synchronized (next) { next.notify(); }
+        }
     }
 }

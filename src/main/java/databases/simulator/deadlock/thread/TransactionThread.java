@@ -14,8 +14,9 @@ public class TransactionThread extends Thread {
 
     private final long timestamp = CLOCK.incrementAndGet();
     private final LockManager lockManager;
-    private volatile boolean aborted = false;
     private final ThreadLocalRandom rnd = ThreadLocalRandom.current();
+
+    private volatile boolean aborted = false;
 
     public TransactionThread(String name, LockManager manager) {
         super(name);
@@ -30,9 +31,15 @@ public class TransactionThread extends Thread {
         return aborted;
     }
 
-    /** Marca a transação como abortada. */
+    /** Marca a transação como abortada e libera imediatamente todos os locks. */
     public synchronized void abort() {
+        if (aborted) return;                 // evita aborts repetidos
         aborted = true;
+
+        // Libera todos os locks que esta transação ainda mantém
+        lockManager.releaseAllLocks(this);
+
+        // Acorda a thread para que ela reinicie o loop
         interrupt();
     }
 
@@ -41,7 +48,7 @@ public class TransactionThread extends Thread {
         try {
             Thread.sleep(rnd.nextLong(500, 1500));
         } catch (InterruptedException ignored) {
-            // ignorado: interrupção tratada no run()
+            // interrupção já tratada no run()
         }
     }
 
@@ -60,18 +67,14 @@ public class TransactionThread extends Thread {
 
                 // Tenta obter o primeiro lock
                 if (!lockManager.lock(firstLock, this)) {
-                    synchronized (this) {
-                        wait();
-                    }
+                    synchronized (this) { wait(); }
                 }
 
                 randomDelay();
 
                 // Tenta obter o segundo lock
                 if (!lockManager.lock(secondLock, this)) {
-                    synchronized (this) {
-                        wait();
-                    }
+                    synchronized (this) { wait(); }
                 }
 
                 randomDelay();
@@ -88,6 +91,7 @@ public class TransactionThread extends Thread {
                 if (aborted) {
                     System.out.println(getName()
                             + " foi abortada por deadlock. Reiniciando...");
+                    // loop continua
                 } else {
                     e.printStackTrace();
                 }
