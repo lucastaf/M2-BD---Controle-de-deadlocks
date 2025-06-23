@@ -86,11 +86,11 @@ public class TransactionThread extends Thread {
                 lockManager.unlock(secondLock, this);
                 randomDelay();
 
-                System.out.println(getName() + " fez commit e finalizou.");
+                System.out.println("[FINISH] " + getName() + " fez commit e finalizou.");
                 break; // sucesso ⇒ encerra loop
             } catch (InterruptedException e) {
                 if (aborted) {
-                    System.out.println(getName()
+                    System.out.println("[ABORT] " + getName()
                             + " foi abortada por deadlock. Reiniciando...");
                     // loop continua
                 } else {

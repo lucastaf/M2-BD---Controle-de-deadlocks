@@ -27,6 +27,8 @@ public class DeadlockSimulation {
             try { t.join(); } catch (InterruptedException ignored) {}
         });
 
+        System.out.println();
+
         System.out.println("Todas as transações finalizaram.");
     }
 }
