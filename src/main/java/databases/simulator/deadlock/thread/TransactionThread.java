@@ -31,7 +31,9 @@ public class TransactionThread extends Thread {
         return aborted;
     }
 
-    /** Marca a transação como abortada e libera imediatamente todos os locks. */
+    /**
+     * Marca a transação como abortada e libera imediatamente todos os locks.
+     */
     public synchronized void abort() {
         if (aborted) return;                 // evita aborts repetidos
         aborted = true;
@@ -43,31 +45,29 @@ public class TransactionThread extends Thread {
         interrupt();
     }
 
-    /** Espera aleatoriamente entre 0,5 s e 1,5 s. */
-    private void randomDelay() {
-        try {
-            Thread.sleep(rnd.nextLong(500, 1500));
-        } catch (InterruptedException ignored) {
-            // interrupção já tratada no run()
-        }
+    /**
+     * Espera aleatoriamente entre 0,5 s e 1,5 s.
+     */
+    private void randomDelay() throws InterruptedException {
+        Thread.sleep(rnd.nextLong(500, 1500));
     }
 
     @Override
     public void run() {
         // permite reiniciar caso seja abortada
+        String firstLock = rnd.nextBoolean() ? "X" : "Y";
+        String secondLock = firstLock.equals("X") ? "Y" : "X";
+        System.out.println("participant " + getName());
         while (true) {
             aborted = false;
-            System.out.println(getName() + " entrou em execução.");
-
-            String firstLock  = rnd.nextBoolean() ? "X" : "Y";
-            String secondLock = firstLock.equals("X") ? "Y" : "X";
-
             try {
                 randomDelay();
 
                 // Tenta obter o primeiro lock
                 if (!lockManager.lock(firstLock, this)) {
-                    synchronized (this) { wait(); }
+                    synchronized (this) {
+                        wait();
+                    }
                 }
 
                 randomDelay();
@@ -78,7 +78,9 @@ public class TransactionThread extends Thread {
 
                 // Tenta obter o segundo lock
                 if (!lockManager.lock(secondLock, this)) {
-                    synchronized (this) { wait(); }
+                    synchronized (this) {
+                        wait();
+                    }
                 }
 
                 randomDelay();
@@ -86,11 +88,11 @@ public class TransactionThread extends Thread {
                 lockManager.unlock(secondLock, this);
                 randomDelay();
 
-                System.out.println("[FINISH] " + getName() + " fez commit e finalizou.");
+                System.out.println(getName() + "->>" + getName() + ":[FINISH] fez commit e finalizou.");
                 break; // sucesso ⇒ encerra loop
             } catch (InterruptedException e) {
                 if (aborted) {
-                    System.out.println("[ABORT] " + getName()
+                    System.out.println(getName() + "-->" + getName() + ":[ABORT] " + getName()
                             + " foi abortada por deadlock. Reiniciando...");
                     // loop continua
                 } else {

@@ -33,15 +33,15 @@ public class LockManager {
 
         // Wound-wait: thread mais velha “fere” a mais nova
         if (tx.getTimestamp() < owner.getTimestamp()) {
-            System.out.println("[ABORT FORÇADO] " + tx.getName() + " força " + owner.getName()
-                    + " a abortar (wound-wait em " + itemId + ")");
+            System.out.println(tx.getName() + "->>" + itemId + ":[ABORT FORÇADO] " + tx.getName() + " força "
+                    + owner.getName() + " a abortar (wound-wait em " + owner.getName()  + ")");
             owner.abort();                  // aborta a thread mais nova
             grantLock(item, tx);
             return true;
         }
 
         // Caso contrário, espera
-        System.out.println("[WAIT] " + tx.getName() + " está esperando lock em " + itemId);
+        System.out.println(tx.getName() + "-->" + tx.getName() + ":[WAIT] está esperando lock em "+ itemId);
         item.getQueue().add(tx);
         return false;
     }
@@ -69,7 +69,7 @@ public class LockManager {
     private synchronized void grantLock(DataItem item, TransactionThread tx) {
         item.setLocked(true);
         item.setOwner(tx);
-        System.out.println("[GRANT-LOCK] " + tx.getName() + " obteve lock em " + item.getItemId());
+        System.out.println(tx.getName() + "->>+" + item.getItemId() + ":[GRANT-LOCK] " + tx.getName() + " Obteve lock em " + item.getItemId());
     }
 
     /**
@@ -82,7 +82,7 @@ public class LockManager {
         item.setLocked(false);
         item.setOwner(null);
 
-        String msg = "[UNLOCK] " + tx.getName() + " liberou lock em " + item.getItemId();
+        String msg = item.getItemId() + "-->>-" +  tx.getName() + ":[UNLOCK] " + tx.getName() + " liberou lock de " + item.getItemId();
         if (forced) msg += " (abort)";
         System.out.println(msg);
 
